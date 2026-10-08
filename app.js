@@ -49,8 +49,10 @@ function dataBounds(){
   const ends=[D.fb,D.yt,D.ig,D.web,D.play,D.apple].map(lastD).filter(Boolean).sort();
   const starts=[D.fb,D.yt,D.ig,D.web,D.play,D.apple,D.ads,D.traffic,D.qual,D.pSubs,D.aSubs].map(r=>r&&r.length?r[0].d:null).filter(Boolean).sort();
   const exLast=((D.extra&&D.extra.tabs)||[]).map(t=>t.last).filter(Boolean);
-  const end=ends[ends.length-1], endAll=[end,all[all.length-1],...exLast].filter(Boolean).sort().pop();
-  return {start:starts[0],end,endAll};
+  /* a workbook with only some tabs filled (or none yet) still gets sensible dates */
+  const endAll=[ends[ends.length-1],all[all.length-1],...exLast].filter(Boolean).sort().pop()||new Date().toISOString().slice(0,10);
+  const end=ends[ends.length-1]||endAll, first=[...starts,...all].filter(Boolean).sort()[0];
+  return {start:first&&first<=endAll?first:addD(endAll,-27),end,endAll};
 }
 const PRESETS=[['7','Last 7 days'],['28','Last 28 days'],['90','Last 90 days'],['month','This month'],['lastmonth','Last month'],['year','This year'],['all','All time']];
 function presetDates(p){
@@ -75,15 +77,17 @@ function byDate(rs){ let m=IDX.get(rs); if(!m){ m=new Map(); (rs||[]).forEach(r=
 /* (kept for reference) each source used to be measured over its own latest N days, so a source that
    reports a few days late is never penalised for the missing tail */
 function win(rs){ if(!rs||!rs.length||!W) return null; return W; }
+/* a source with no rows still gives a full, empty result, so every page can draw without it */
+const EMPTY_M=()=>({w:W,cur:null,prev:null,d:null,cd:0,pd:0,asOf:null,none:true,series:W?days(W.cs,W.end).map(()=>null):[]});
 function st(rs,k){
-  const w=win(rs); if(!w) return {w:null,cur:null,prev:null,d:null};
+  const w=win(rs); if(!w) return EMPTY_M();
   const c=inR(rs,w.cs,w.end), p=inR(rs,w.ps,w.pe);
   const cv=sum(c,k), pv=sum(p,k), cd=c.filter(r=>has(r[k])).length, pd=p.filter(r=>has(r[k])).length;
   const d=(pd>=N/2&&cd)?chg(cv/cd,pv/pd):null;
   const bd=byDate(rs); return {w,cur:cv,prev:pv,d,cd,pd,series:days(w.cs,w.end).map(x=>{const r=bd.get(x);return r&&has(r[k])?r[k]:null;})};
 }
 function level(rs,k){ /* for stock values: latest vs the value at the end of the previous period */
-  const w=win(rs); if(!w) return {w:null,cur:null,prev:null,d:null};
+  const w=win(rs); if(!w) return EMPTY_M();
   /* a running total (followers, subscribers, devices) is the latest known figure up to the end of the dates,
      even if that source stopped reporting a little earlier; asOf says which day it is from */
   const upto=end=>{ for(let i=rs.length-1;i>=0;i--){ const r=rs[i]; if(r.d<=end&&has(r[k])) return r; } return null; };
@@ -93,6 +97,7 @@ function level(rs,k){ /* for stock values: latest vs the value at the end of the
 
 /* ================= visual helpers ================= */
 function spark(vals,color,kind){
+  if(!Array.isArray(vals)) return '<svg viewBox="0 0 120 30"></svg>';
   const v=vals.map(x=>has(x)?x:null), nn=v.filter(has); if(nn.length<2) return '<svg viewBox="0 0 120 30"></svg>';
   const mx=Math.max(...nn), mn=kind==='level'?Math.min(...nn):0, rg=(mx-mn)||1, n=v.length;
   const X=i=>i/(n-1)*120, Y=x=>27-(x-mn)/rg*24;
@@ -509,9 +514,9 @@ const exSlug=n=>'ex-'+String(n).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace
 /* pages for platforms with no data in the workbook are left out (config.js: pages.hideEmpty), and so is any page in pages.hide */
 const PG=BR.pages||{}, HIDE=new Set((PG.hide||[]).map(String)), LOCK=new Set(['summary','actions','connect']), ALWAYS=new Set(['summary','actions','data','updates','connect']);
 const nz=v=>Array.isArray(v)?v.length>0:!!v&&typeof v==='object'&&Object.values(v).some(nz);
-const PAGE_DATA={funnels:['web','play','apple','aInst','pSubs','aSubs'],social:['fb','ig','yt','xAcct','ttAcct','igPosts','fbPosts','ytVideos','ttVideos','xPosts'],facebook:['fb','fbPosts'],
-  instagram:['ig','igPosts','igAcct','igFH','igFS'],youtube:['yt','ytVideos','ytReach','ytSnap'],tiktok:['ttAcct','ttVideos'],x:['xAcct','xPosts'],website:['web','webCh','traffic'],ads:['ads'],
-  installs:['play','apple','aInst','appleDel','playCty'],subs:['pSubs','aSubs','aEv','earn','apple'],adrev:['adsense','admob'],stability:['qual']};
+const PAGE_DATA={funnels:['web','play','apple','aInst','pSubs','aSubs','traffic'],social:['fb','ig','yt','xAcct','ttAcct','igPosts','fbPosts','ytVideos','ttVideos','xPosts'],facebook:['fb','fbPosts'],
+  instagram:['ig','igPosts','igAcct','igFH','igFS'],youtube:['yt','ytVideos','ytReach','ytSnap'],tiktok:['ttAcct','ttVideos'],x:['xAcct','xPosts'],website:['web','webCh'],ads:['ads'],
+  installs:['play','apple','aInst','appleDel','playCty','traffic'],subs:['pSubs','aSubs','aEv','earn','apple'],adrev:['adsense','admob'],stability:['qual']};
 function pageHasData(id){ const ks=PAGE_DATA[id]; return !ks||ks.some(k=>nz(D[k])); }
 const showPage=id=>LOCK.has(id)||(!HIDE.has(id)&&(ALWAYS.has(id)||PG.hideEmpty===false||pageHasData(id)));
 function navGroups(){ const ex=((D.extra&&D.extra.tabs)||[]).filter(t=>t.kind==='social');
@@ -944,11 +949,15 @@ function render(){
   const SCF=(()=>{ const f=[folV('facebook'),folV('instagram'),folV('youtube'),(TA.length||TV.length)?folV('tiktok'):null,(XP.length||XA.length)?folV('x'):null,...exSocial.map(t=>folV(exSlug(t.name)))].filter(has);
     const nf=[fbNet,igNet?igNet.cur:igNF.cur,ytNet,(TA.length||TV.length)?ttNet:null,(XP.length||XA.length)?xNet:null].filter(has);
     return {tot:f.reduce((t,v)=>t+v,0),nf:nf.reduce((t,v)=>t+v,0),nfN:nf.length}; })();
+  /* what this workbook actually has, so the summary only shows what it can back with figures */
+  const HAS={social:[D.fb,D.ig,D.yt,D.ttAcct,D.ttVideos,D.xAcct,D.xPosts,D.igPosts,D.fbPosts,D.ytVideos].some(nz)||exSocial.length>0,fb:nz(D.fb),web:nz(D.web),
+    app:[D.play,D.apple,D.aInst].some(nz),subs:[D.pSubs,D.aSubs].some(nz),qual:nz(D.qual),play:nz(D.play),rev:[D.apple,D.earn,D.adsense,D.admob].some(nz),fol:SCF.nfN>0||SCF.tot>0};
+  const SHOW={'Social reach':HAS.social,'Engagement':HAS.fb,'Follower growth':HAS.fol,'Website traffic':HAS.web,'App installs':HAS.app,'App retention':HAS.play,'Paying subscribers':HAS.subs,'App stability':HAS.qual};
 
   const score=[
-    {t:'Social reach',v:abbr(allViews),w:`Views on ${viewSplit.map(x=>x[0]).join(', ').replace(/, ([^,]*)$/,' and $1')}. ${pct(fbShare,0)} came from Facebook.`,d:allViewsD,s:spark(fbV.series,'#5B8DEF'),c:'#5B8DEF'},
+    {t:'Social reach',v:abbr(allViews),w:`Views on ${viewSplit.map(x=>x[0]).join(', ').replace(/, ([^,]*)$/,' and $1')}.${HAS.fb&&viewSplit.length>1?` ${pct(fbShare,0)} came from Facebook.`:''}`,d:allViewsD,s:spark(fbV.series,'#5B8DEF'),c:'#5B8DEF'},
     {t:'Engagement',v:pct(fbER,2),w:'Facebook engagements per view: reactions, comments, shares and clicks.',d:fbERd,pp:true,s:spark(fbV.series.map((v,i)=>{const e=fbE.series[i];return has(v)&&v&&has(e)?e/v:null;}),'#E0B35A'),c:'#E0B35A'},
-    {t:'Follower growth',v:sgn(SCF.nf),w:`New followers across ${SCF.nfN} platforms, net of unfollows where the platform reports them. ${full(SCF.tot)} followers in total${folNow?'':' on '+dS(W.end)}.`,d:null,s:spark(fbF.series,'#5B8DEF','level'),c:'#5B8DEF',st:SCF.nf>0?'good':'bad'},
+    {t:'Follower growth',v:sgn(SCF.nf),w:`New followers across ${SCF.nfN} platform${SCF.nfN===1?'':'s'}, net of unfollows where the platform reports them.${SCF.tot?` ${full(SCF.tot)} followers in total${folNow?'':' on '+dS(W.end)}.`:''}`,d:null,s:spark(fbF.series,'#5B8DEF','level'),c:'#5B8DEF',st:SCF.nf>0?'good':'bad'},
     {t:'Website traffic',v:abbr(web.s.cur),w:`Visits to the website, from ${full(web.u.cur)} people.`,d:web.s.d,s:spark(web.s.series,'#3FB5A8'),c:'#3FB5A8'},
     {t:'App installs',v:abbr(installs),w:`${full(pl.i.cur)} on Android, ${full((ap.dl.cur||0)+(ap.rd.cur||0))} on iPhone.`,d:instD,s:spark(pl.i.series,'#5BBF7A'),c:'#5BBF7A'},
     {t:'App retention',v:full(plAct.cur),w:`Android phones that still have the app. ${pct(uninRate,0)} of installs were later removed.`,d:plAct.d,s:spark(plAct.series,'#5BBF7A','level'),c:'#5BBF7A',st:has(uninRate)&&uninRate>60?'bad':undefined},
@@ -964,20 +973,20 @@ function render(){
   const findings=[];
   findings.push(has(fbShare)&&fbShare>85?{g:'social',k:'watch',i:'!',a:'Repost the best Facebook videos to Instagram, YouTube Shorts and TikTok, and check each platform\u2019s views every week.',h:`Almost all our views come from Facebook`,p:`Facebook brought ${pct(fbShare,0)} of the views we can measure. YouTube added ${abbr(ytV.cur)}. ${igHasViews?'':'Instagram views aren\'t in the sheet yet, and '}TikTok and X are measured differently, so they have their own pages.`}:null);
   findings.push(has(uninRate)?{g:'installs',k:uninRate>60?'bad':'watch',i:'↓',a:'Review what new users see in their first minutes and at the paywall, and ask people who uninstall why, with a one-question survey.',h:`Most Android users don't keep the app`,p:`${full(lifeInst)} installs so far, but ${full(lifeUnin)} uninstalls. Only ${full(plAct.cur)} phones still have it. Keeping users matters more than finding new ones.`}:null);
-  findings.push({g:'subs',k:'good',i:CURI.icon,a:TRIAL.all.start?`Turn more free trials into subscribers: ${full(TRIAL.all.paid)} of ${full(TRIAL.all.start)} Apple trials became paying (${pct(TRIAL.all.paid/TRIAL.all.start*100,0)}). Remind people before their trial ends and show what paying unlocks.`:'Promote the free trial in the app and on social, then track how many trials become paying.',h:`${full(activeSubs)} people pay for the app`,p:`${full(pS.cur)} on Android and ${full(aS.cur)} on iPhone${trialSubs?`, plus ${full(trialSubs)} on a free trial`:''}. Subscriptions have brought in about ${CURSYM}${full(Math.round(lifeApple+lifePlay))} after the stores\u2019 fees (${CURSYM}${full(Math.round(lifeApple))} from Apple, ${CURSYM}${full(Math.round(lifePlay))} from Google Play)${lifeAds?`, and ads another ${CURSYM}${full(Math.round(lifeAds))}`:''}.`});
+  findings.push(HAS.subs&&{g:'subs',k:'good',i:CURI.icon,a:TRIAL.all.start?`Turn more free trials into subscribers: ${full(TRIAL.all.paid)} of ${full(TRIAL.all.start)} Apple trials became paying (${pct(TRIAL.all.paid/TRIAL.all.start*100,0)}). Remind people before their trial ends and show what paying unlocks.`:'Promote the free trial in the app and on social, then track how many trials become paying.',h:`${full(activeSubs)} people pay for the app`,p:`${full(pS.cur)} on Android and ${full(aS.cur)} on iPhone${trialSubs?`, plus ${full(trialSubs)} on a free trial`:''}. Subscriptions have brought in about ${CURSYM}${full(Math.round(lifeApple+lifePlay))} after the stores\u2019 fees (${CURSYM}${full(Math.round(lifeApple))} from Apple, ${CURSYM}${full(Math.round(lifePlay))} from Google Play)${lifeAds?`, and ads another ${CURSYM}${full(Math.round(lifeAds))}`:''}.`});
   findings.push(has(qa)?{g:'stability',k:qa>0.47||qc>1.09?'bad':'good',i:qa>0.47?'!':'✓',a:qa>0.47?'Ask the app developers to fix the most common freezes, listed in Google Play Console under Android vitals, then ANRs.':'Keep checking the weekly crash and freeze rates after each app update.',h:qa>0.47?`The app freezes too often`:`The app is stable`,p:qa>0.47?`Over the last 28 days it froze for ${pct(qa,2)} of daily users. Google's limit is 0.47%, and going over it can push the app down in the Play Store.`:`Crashes and freezes are both inside Google's limits.`}:null);
   /* new tabs and columns are listed on the Updates page, not among the business insights */
   const F=findings.filter(Boolean);
   const funnel=[
-    {l:'Social views',s:'All platforms',v:allViews,c:'#5B8DEF'},
-    {l:'Website visits',s:SITE,v:web.s.cur,c:'#3FB5A8'},
-    {l:'App installs',s:'Google Play and App Store',v:installs,c:'#5BBF7A'},
-    {l:'New subscriptions',s:'Google Play and App Store',v:newSubs,c:'#D9A857'},
-    {l:'Revenue',s:'Subscriptions and ads',v:revWin,c:'#D9A857',money:true}];
+    {l:'Social views',s:'All platforms',v:allViews,c:'#5B8DEF',on:HAS.social},
+    {l:'Website visits',s:SITE,v:web.s.cur,c:'#3FB5A8',on:HAS.web},
+    {l:'App installs',s:'Google Play and App Store',v:installs,c:'#5BBF7A',on:HAS.app},
+    {l:'New subscriptions',s:'Google Play and App Store',v:newSubs,c:'#D9A857',on:HAS.subs},
+    {l:'Revenue',s:'Subscriptions and ads',v:revWin,c:'#D9A857',money:true,on:HAS.rev}].filter(f=>f.on);
   const fmax=Math.max(...funnel.map(f=>f.v||0));
   const flog=v=>has(v)&&v>0&&fmax>0?Math.max(3,Math.log10(v+1)/Math.log10(fmax+1)*100):0;
   const priOld=[
-    [`Keep more Android users`,`For every 100 Android installs there are ${Math.round(uninRate)} uninstalls. Look at the first few minutes in the app and the paywall.`],
+    has(uninRate)&&[`Keep more Android users`,`For every 100 Android installs there are ${Math.round(uninRate)} uninstalls. Look at the first few minutes in the app and the paywall.`],
     has(qa)&&qa>0.47?[`Stop the app freezing`,`Over the last 28 days it froze for ${pct(qa,2)} of daily users. Getting under Google's 0.47% limit protects our Play Store ranking.`]:null,
     ...(has(fbShare)&&fbShare>50?[[`Rely less on Facebook`,`${pct(fbShare,0)} of our views come from it. ${(()=>{ const nxt=viewSplit.filter(x=>x[0]!=='Facebook').sort((a,b)=>b[1]-a[1])[0]; return nxt?`${nxt[0]} is next with ${pct(nxt[1]/allViews*100,0)}; growing it spreads the risk.`:''; })()}`]]:[]),
     ...(()=>{ const TS=(D.extra&&D.extra.tabStats)||[]; const st2=staleAreas(TS), err=TS.filter(t=>t.errors);
@@ -987,7 +996,9 @@ function render(){
   /* the short list on the summary is the top of the Action plan, so the two pages never disagree */
   const firstSentence=t=>{ const k=String(t).indexOf('. ',30); return k>0?String(t).slice(0,k+1):String(t); };
   const pri=ACT&&ACT.actions.length?ACT.actions.slice(0,5).map(a=>[a.title,firstSentence(a.why)]):priOld;
-  const headline=`${abbr(allViews)} views on social${has(allViewsD)?`, ${allViewsD<0?'down':'up'} ${pct(Math.abs(allViewsD),0)} on ${prevP}`:''}. ${full(activeSubs)} people pay for the app.`;
+  const hParts=[HAS.social?`${abbr(allViews)} views on social${has(allViewsD)?`, ${allViewsD<0?'down':'up'} ${pct(Math.abs(allViewsD),0)} on ${prevP}`:''}`:'',!HAS.social&&HAS.web?`${abbr(web.s.cur)} website visits`:'',
+    HAS.subs?`${full(activeSubs)} people pay for the app`:HAS.app?`${abbr(installs)} app installs`:''].filter(Boolean);
+  const headline=hParts.length?hParts.join('. ')+'.':'Your figures at a glance.';
   SUMMARY_TEXT=[`${BRAND}, ${rng(fbV.w)}`,'',headline,'','What stands out:',...F.map(f=>`- ${f.h}. ${f.p}${f.a?` What to do: ${f.a}`:''}`),'','What we should do next:',...pri.map((p,i)=>`${i+1}. ${p[0]}. ${p[1]}`)].join('\n');
   P.summary=`
     ${VISIT.defNote&&!sessionStorage.getItem('dash-visit-seen')?`<div class="co"><h4>The dashboard was updated</h4><p>${esc(VISIT.defNote)}</p></div>`:''}
@@ -996,20 +1007,20 @@ function render(){
     <div class="hero"><img class="hero-mark" src="${LOGO_NOW()}" alt=""><div class="k"><span>${esc(BRAND)}, ${rng(fbV.w)}</span><button type="button" class="btn hero-copy" id="copysum"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="5" width="8.5" height="8.5" rx="1.8"/><path d="M10.5 5V3.8A1.3 1.3 0 0 0 9.2 2.5H3.8A1.3 1.3 0 0 0 2.5 3.8v5.4A1.3 1.3 0 0 0 3.8 10.5H5"/></svg>Copy summary</button></div>
       <h2>${headline}</h2>
       <div class="hero-nums">
-        <div class="hn"><div class="l">Social views</div><div class="v">${abbr(allViews)}</div><div class="s">${has(allViewsD)?`<span style="color:${allViewsD>0?'var(--good)':'var(--bad)'}">${allViewsD>0?'▲':'▼'} ${pct(Math.abs(allViewsD),1)}</span> vs ${prevP}`:''}</div></div>
-        <div class="hn"><div class="l">Website visits</div><div class="v">${abbr(web.s.cur)}</div><div class="s">${has(web.s.d)?`<span style="color:${web.s.d>0?'var(--good)':'var(--bad)'}">${web.s.d>0?'▲':'▼'} ${pct(Math.abs(web.s.d),1)}</span> vs ${prevP}`:''}</div></div>
-        <div class="hn"><div class="l">App installs</div><div class="v">${abbr(installs)}</div><div class="s">${has(instD)?`<span style="color:${instD>0?'var(--good)':'var(--bad)'}">${instD>0?'▲':'▼'} ${pct(Math.abs(instD),1)}</span> vs ${prevP}`:''}</div></div>
-        <div class="hn"><div class="l">Paying subscribers</div><div class="v">${full(activeSubs)}</div><div class="s">Android and iPhone</div></div>
+        ${HAS.social?`<div class="hn"><div class="l">Social views</div><div class="v">${abbr(allViews)}</div><div class="s">${has(allViewsD)?`<span style="color:${allViewsD>0?'var(--good)':'var(--bad)'}">${allViewsD>0?'▲':'▼'} ${pct(Math.abs(allViewsD),1)}</span> vs ${prevP}`:''}</div></div>`:''}
+        ${HAS.web?`<div class="hn"><div class="l">Website visits</div><div class="v">${abbr(web.s.cur)}</div><div class="s">${has(web.s.d)?`<span style="color:${web.s.d>0?'var(--good)':'var(--bad)'}">${web.s.d>0?'▲':'▼'} ${pct(Math.abs(web.s.d),1)}</span> vs ${prevP}`:''}</div></div>`:''}
+        ${HAS.app?`<div class="hn"><div class="l">App installs</div><div class="v">${abbr(installs)}</div><div class="s">${has(instD)?`<span style="color:${instD>0?'var(--good)':'var(--bad)'}">${instD>0?'▲':'▼'} ${pct(Math.abs(instD),1)}</span> vs ${prevP}`:''}</div></div>`:''}
+        ${HAS.subs?`<div class="hn"><div class="l">Paying subscribers</div><div class="v">${full(activeSubs)}</div><div class="s">Android and iPhone</div></div>`:''}
       </div></div>
     <h3 class="st">Scorecard <small>${!has(allViewsD)?'All-time totals. Pick a shorter period to compare it with the one before.':`Each area against the ${N} days before, using daily averages`}</small></h3>
-    <div class="sc">${score.map(s=>{ const stt=s.st||status(s.d); const GO={'Social reach':'social','Engagement':'facebook','Follower growth':'social','Website traffic':'website','App installs':'installs','App retention':'installs','Paying subscribers':'subs','App stability':'stability'}; return `<div class="sci" data-go="${GO[s.t]||'summary'}" tabindex="0" role="link" aria-label="${s.t}, open detail"><div class="t">${s.t}${stt==='none'?'':`<span class="st-chip ${stt}">${chipTxt[stt]}</span>`}</div><div class="v">${s.v}</div>${s.d===null&&!s.pp?'':pill(s.d,{pp:s.pp})}<div class="w">${s.w}</div>${s.s}</div>`; }).join('')}</div>
-    <h3 class="st">What stands out</h3>
+    <div class="sc">${score.filter(s=>SHOW[s.t]!==false).map(s=>{ const stt=s.st||status(s.d); const GO={'Social reach':'social','Engagement':'facebook','Follower growth':'social','Website traffic':'website','App installs':'installs','App retention':'installs','Paying subscribers':'subs','App stability':'stability'}; return `<div class="sci" data-go="${GO[s.t]||'summary'}" tabindex="0" role="link" aria-label="${s.t}, open detail"><div class="t">${s.t}${stt==='none'?'':`<span class="st-chip ${stt}">${chipTxt[stt]}</span>`}</div><div class="v">${s.v}</div>${s.d===null&&!s.pp?'':pill(s.d,{pp:s.pp})}<div class="w">${s.w}</div>${s.s}</div>`; }).join('')}</div>
+    ${F.length?'<h3 class="st">What stands out</h3>':''}
     <div class="fi">${F.map(f=>`<div class="fc ${f.k}" data-go="${f.g}" tabindex="0" role="link"><div class="ic">${f.i}</div><div><h4>${f.h}</h4><p>${f.p}</p>${f.a?`<div class="cta"><b>What to do</b>${f.a}</div>`:''}<div class="go cta-b">${({social:'Open Social overview',installs:'Open App installs',subs:'Open Subscriptions',stability:'Open App stability'})[f.g]||'See the detail'} \u2192</div></div></div>`).join('')}</div>
     <div class="g2" style="margin-top:16px">
-      <div class="card"><h4>From attention to revenue</h4><p class="cs">The bars use a log scale so small numbers still show.</p>
+      ${funnel.length>1?`<div class="card"><h4>From attention to revenue</h4><p class="cs">The bars use a log scale so small numbers still show.</p>
         <div class="fun">${funnel.map(f=>`<div class="fr"><div class="fl">${f.l}<small>${f.s}</small></div><div class="fb"><i style="width:${flog(f.v)}%;background:${f.c}"></i></div><div class="fv">${f.money?usd(f.v):abbr(f.v)}</div></div>`).join('')}</div>
-        <p class="note">Each step is a total for these dates. They aren't linked by tracking, so there are no conversion rates here; the Funnels page has each platform's full funnel.</p></div>
-      <div class="card"><h4>What we should do next</h4><p class="cs">The next 30 days, most important first.</p><ol class="pr">${pri.map(p=>`<li><div><b>${p[0]}</b><span>${p[1]}</span></div></li>`).join('')}</ol><a class="ap-more" href="#actions" data-go="actions">See the full action plan${ACT&&ACT.actions.length?` (${ACT.actions.length} actions)`:''} \u2192</a></div>
+        <p class="note">Each step is a total for these dates. They aren't linked by tracking, so there are no conversion rates here; the Funnels page has each platform's full funnel.</p></div>`:''}
+      <div class="card"><h4>What we should do next</h4><p class="cs">The next 30 days, most important first.</p>${pri.length?`<ol class="pr">${pri.map(p=>`<li><div><b>${p[0]}</b><span>${p[1]}</span></div></li>`).join('')}</ol>`:'<p class="cs">Nothing urgent right now. The action plan adds tasks as soon as the numbers call for them.</p>'}<a class="ap-more" href="#actions" data-go="actions">See the full action plan${ACT&&ACT.actions.length?` (${ACT.actions.length} ${ACT.actions.length===1?'task':'tasks'})`:''} \u2192</a></div>
     </div>`;
 
   /* ---------- social overview ---------- */
@@ -1129,7 +1140,7 @@ function render(){
         <div class="lb-bar"><i style="width:${Math.max(2,r[k]/mx*100)}%;background:${strong?`linear-gradient(90deg,${color},${hexA(color,.55)})`:`linear-gradient(90deg,${hexA(color,.5)},${hexA(color,.25)})`}"></i></div>
         <div class="lb-meta">${cols.slice(1).map(c=>`<span class="mchip"><b>${c.f(r)}</b> ${c.h.toLowerCase()}</span>`).join('')}</div></div></div>`).join('')}</div>`;
     return `<div class="g2">${t(list.slice(0,5),'Strongest days',true)}${t(list.slice(-5).reverse(),'Weakest days',false)}</div>`; };
-  const fbGap=fbV.w?days([fbV.w.cs,D.fb[0].d].sort()[1],[fbV.w.end,lastD(D.fb)].sort()[0]).filter(d=>!byDate(D.fb).has(d)):[];
+  const fbGap=fbV.w&&D.fb&&D.fb.length?days([fbV.w.cs,D.fb[0].d].sort()[1],[fbV.w.end,lastD(D.fb)].sort()[0]).filter(d=>!byDate(D.fb).has(d)):[];
   /* follower growth for every platform, side by side */
   { const FG=[['Facebook',D.fb,'f','#5B8DEF'],['Instagram',IGFOL?IGFOL.rows:[],'ft','#D66BA0'],['YouTube',YTFOL?YTFOL.rows:[],'ft','#E5654F'],['X',D.xAcct||[],'f','#B9B9C0'],['TikTok',D.ttAcct||[],'f','#69C9D0']]
       .map(([n,rows,k,c])=>({n,c,g:growth(rows,k,W&&W.end)})).filter(x=>x.g&&x.g.steps.some(y=>y.then));
@@ -1691,6 +1702,12 @@ function render(){
     const rp=(ap.rev.cur||0)+(playRev||0)+adsRev+exRevTot; AUD.render.push({g:'Consistency',n:'Revenue adds up',ok:Math.abs(rp-revenueR)<0.005?'pass':'fail',d:`${usd(revenueR)} = Apple ${usd(ap.rev.cur||0)} + Google Play ${usd(playRev||0)} + ads ${usd(adsRev)}${exRevTot?' + other '+usd(exRevTot):''}`});
     const ip=(fbE.cur||0)+ytIntAll+igIntCur+(xE||0); AUD.render.push({g:'Consistency',n:'Interactions add up across platforms',ok:Math.abs(ip-allInt)<0.5?'pass':'fail',d:`${full(allInt)} interactions`}); }
   try{ P.actions=actionsPage(); }catch(e){ console.warn('Dashboard action plan:',e); P.actions=`${ph('Action plan','What to change next, worked out from the live sheet.','')}<div class="empty"><h4>The action plan could not be worked out</h4><p>${esc(e&&e.message||e)}</p></div>`; }
+  /* a workbook with no figures yet: say so, instead of an empty summary and "nothing to do" */
+  if(!Object.values(PAGE_DATA).flat().some(k=>nz(D[k]))&&!((D.extra&&D.extra.tabs)||[]).length){
+    const card=`<div class="empty"><h4>Your workbook has no figures yet</h4><p>Fill at least one tab with one row per day, for example <b>YouTube Daily</b> or <b>GA4</b>, keeping the column names in the first row. Then open the file again; in Chrome and Edge it updates by itself when you save it. Connect data lists every tab and the API that fills it.</p>`+
+      `<div class="cn-b"><button type="button" class="btn" data-go="connect">See which tabs to fill</button>${DATA_CFG.sample?'<button type="button" class="btn" data-conn="sample">Try the sample data</button>':''}</div></div>`;
+    P.summary=`${ph('Executive summary','Your headline numbers appear here once the workbook has figures.','')}${card}`;
+    P.actions=`${ph('Action plan','What to do first, worked out from your figures once there are some.','')}${card}`; }
   if(THEME_SWAP[document.documentElement.getAttribute('data-theme')]) for(const k in P) P[k]=themeSwap(P[k]);
   for(const k in ALSO) if(P[k]!==undefined) P[k]+=`<h3 class="st">Also in the sheet <small>Added automatically</small></h3>${ALSO[k].join('')}`;
   for(const k in P) P[k]=String(P[k]).replace(/<h3 class="st">(?:(?!<\/h3>)[\s\S])*<\/h3>(?=\s*(?:<div data-snap="1">\s*)?(?:<h3|$))/g,'');

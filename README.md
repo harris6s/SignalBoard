@@ -2,7 +2,7 @@
 
 A live analytics dashboard and action plan for data from 11 platform APIs: Facebook, Instagram, Meta Ads, YouTube, TikTok, X, Google Analytics 4, Google Play, App Store Connect, AdMob and AdSense.
 
-**[Live demo](https://harris6s.github.io/SignalBoard/)** · **[Use this template](https://github.com/harris6s/SignalBoard/generate)**
+**[Live demo](https://harris6s.github.io/SignalBoard/)** · **[Use this template](https://github.com/harris6s/SignalBoard/generate)** · Built with [Claude](https://claude.ai)
 
 ![Signalboard demo: the summary, the action plan, a platform page and a theme change](demo.gif)
 
@@ -63,6 +63,13 @@ Every tab, column and endpoint is listed in the [workbook reference](WORKBOOK.md
 
 To run it locally, run `python3 -m http.server` in the project folder and open `http://localhost:8000`.
 
+### Use your own data (no code)
+
+1. Download [`dashboard-template.xlsx`](dashboard-template.xlsx). It has a tab for each platform, with a note on every column.
+2. Fill one tab to start, for example **YouTube Daily** or **GA4**: export the daily figures from the platform (most offer a CSV export) and paste them under the matching headers, one row per day.
+3. On your dashboard, select **Open an Excel file**, or drag the file onto the page. It is read in your browser and never uploaded. That platform's pages and the action plan fill in, and pages for platforms without data stay hidden.
+4. Add more tabs whenever you like. For automatic daily updates, move the workbook to Google Sheets, fill it from the APIs on a schedule and connect it through the Worker (below).
+
 ## Connecting your data
 
 | Option | Best for | Setup |
@@ -107,6 +114,10 @@ The full list is in the [setup guide](SETUP.md#settings-configjs).
 ## Contributing
 
 Issues and pull requests are welcome. Action plan rules are in `actions.js`, data parsing in `reader.js` and page rendering in `app.js`.
+
+## Credits
+
+Designed and built with [Claude](https://claude.ai), the AI assistant by Anthropic.
 
 ## License
 
