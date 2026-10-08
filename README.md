@@ -2,6 +2,8 @@
 
 A live analytics dashboard and action plan for data from 11 platform APIs: Facebook, Instagram, Meta Ads, YouTube, TikTok, X, Google Analytics 4, Google Play, App Store Connect, AdMob and AdSense.
 
+**[Live demo](https://harris6s.github.io/SignalBoard/)** · **[Use this template](https://github.com/harris6s/SignalBoard/generate)**
+
 ![Signalboard executive summary](summary.png)
 
 Signalboard reads your API data from one Google Sheet or Excel workbook, with one tab per source, and turns it into 18 analytics pages and a prioritised action plan. It is a static site with no server, no database and no build step, so it can be hosted free on GitHub Pages.
