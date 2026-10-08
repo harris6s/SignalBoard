@@ -1,0 +1,3 @@
+/* Empty on purpose: the dashboard fills this from your workbook when it opens (see config.js). */
+window.ATR_LOCKED=!!(window.DASH&&DASH.data&&DASH.data.password&&DASH.data.workerUrl);
+window.ATR_BUILTIN={"fb":[],"ig":[],"yt":[],"ytFilled":[],"ytSnap":[],"apiStatus":null,"igFH":[],"igFS":[],"web":[],"webCh":[],"ads":[],"pSubs":[],"aSubs":[],"aEv":[],"earn":[],"traffic":[],"igPosts":[],"igAcct":[],"fbPosts":[],"ytVideos":[],"ytVideosAsOf":null,"ytReach":[],"xAcct":[],"xPosts":[],"ttAcct":[],"ttVideos":[],"adsense":[],"admob":[],"admobDetail":{"d":[],"c":[],"a":[],"r":[]},"adAudit":{},"aInst":[],"appleDel":[],"play":[],"playCty":{"c":[],"d":[],"r":[]},"fxMissing":{},"apple":[],"appleCty":{"c":[],"d":[],"r":[]},"qual":[],"extra":{"tabs":[],"newCols":[],"tabStats":[]}};
