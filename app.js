@@ -3,7 +3,7 @@ const D = window.ATR_BUILTIN;
 /* post links are stored short in data.js; expand them */
 (function(){ const full=u=>typeof u==='string'?(u.startsWith('~ig/')?'https://www.instagram.com/'+u.slice(4):u.startsWith('~fb/')?'https://www.facebook.com/'+u.slice(4):u):u; ['igPosts','fbPosts','ytVideos'].forEach(k=>(D[k]||[]).forEach(p=>{ if(p.u) p.u=full(p.u); })); })();
 const BR=window.DASH||{}, BRAND=BR.name||'Your Brand', TAGLINE=BR.tagline||'Analytics dashboard', SITE=BR.website||'your website', HANDLE=BR.handles||{};
-const LOGO_NOW=()=>(window.DASH_BRAND&&DASH_BRAND.logo())||'img/logo.svg';
+const LOGO_NOW=()=>(window.DASH_BRAND&&DASH_BRAND.logo())||'logo.svg';
 /* money is shown in the currency set in config.js (or the Personalize panel) */
 const CURI=window.DASH_CUR||{code:'USD',sym:'$',icon:'$',name:'US dollars'}, CUR=CURI.code, CURSYM=CURI.sym, CURNAME=CURI.name;
 const ttUrl=id=>HANDLE.tiktok&&id?`https://www.tiktok.com/@${String(HANDLE.tiktok).replace(/^@/,'')}/video/${id}`:'';
@@ -552,11 +552,11 @@ async function probeLink(){
   let r=null;
   try{ const c=new AbortController(), t=setTimeout(()=>c.abort(),12000); r=await fetch(DATA_URL+'/status',{cache:'no-store',signal:c.signal}); clearTimeout(t); }catch(e){ r=null; }
   if(!r){ let alive=false; try{ await fetch(DATA_URL+'/status',{mode:'no-cors',cache:'no-store'}); alive=true; }catch(e){}
-    return set('red',alive?`The data link is online but won't talk to this site (${location.origin}). Check that the Worker runs worker/worker.js and that its DASHBOARD_SITES setting includes this address.`
+    return set('red',alive?`The data link is online but won't talk to this site (${location.origin}). Check that the Worker runs cloudflare-worker.js and that its DASHBOARD_SITES setting includes this address.`
       :'The data link cannot be reached. It may be offline, or blocked by an ad blocker, antivirus or network filter.'); }
   let j=null; try{ j=await r.json(); }catch(e){}
   if(r.status===403) return set('red',`The data link refused this site (${location.origin}). Add this address to the Worker's DASHBOARD_SITES setting.`);
-  if(!j||!j.passwordLink) return set('amber','Connected, but the Worker is running different code. Paste worker/worker.js into the Worker and press Deploy.');
+  if(!j||!j.passwordLink) return set('amber','Connected, but the Worker is running different code. Paste cloudflare-worker.js into the Worker and press Deploy.');
   if(!j.passwordSet) return set('amber','Connected, but no password is set up. Add the DASHBOARD_PASSWORD secret in the Worker settings, or set data.password to false in config.js.');
   if(j.sheet&&j.sheet.ok===false) return set('amber',`Connected, but the Google Sheet did not answer (${String(j.sheet.note||'no reason given').replace(/\.$/,'')}). You can still sign in.`);
   return set('green',j.sheet&&j.sheet.ok?'Connected to the data link and the Google Sheet.':'Connected to the data link.');
@@ -1943,8 +1943,8 @@ setTimeout(startApp,0);
 const DATA_CFG=(window.DASH&&window.DASH.data)||{};
 const DATA_URL=String(DATA_CFG.workerUrl||window.ATR_DATA_URL||'').trim().replace(/\/+$/,'');
 const FILE_URL=String(DATA_CFG.fileUrl||'').trim();
-/* the Excel library ships with the template (lib/), so nothing depends on an outside server; a full web address works too */
-const XLSX_URL=new URL(DATA_CFG.excelLibrary||window.ATR_XLSX_URL||'lib/xlsx.full.min.js',location.href).href;
+/* the Excel library ships with the template (xlsx.full.min.js), so nothing depends on an outside server; a full web address works too */
+const XLSX_URL=new URL(DATA_CFG.excelLibrary||window.ATR_XLSX_URL||'xlsx.full.min.js',location.href).href;
 /* the sheet reader is in reader.js */
 let READER=null;
 function reader(){ if(READER) return READER;

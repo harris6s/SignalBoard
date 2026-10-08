@@ -10,7 +10,7 @@ window.DASH = {
   /* ---------- your brand ---------- */
   name: 'Your Brand',                   // shown in the side bar, page titles and copied summaries
   tagline: 'Analytics dashboard',        // the line under the name
-  logo: '',                              // leave empty: img/logo.png is used if you upload one, otherwise img/logo.svg
+  logo: '',                              // leave empty: logo.png is used if you upload one, otherwise logo.svg
   color: '',                             // accent colour, e.g. '#1E88E5'. Empty: taken from your logo automatically
   website: 'yourwebsite.com',            // shown on the Website page
   handles: {                             // used to link to your posts; leave blank if you don't use a platform
@@ -38,7 +38,7 @@ window.DASH = {
   /* ---------- where the data comes from: fill in ONE of these ---------- */
   data: {
     /* A. A Cloudflare Worker that reads your Google Sheet (or any Excel link) for you. Private, and updates
-          every minute. Set it up with worker/worker.js (README.md, "Option A"). Example:
+          every minute. Set it up with cloudflare-worker.js (README.md, "Option A"). Example:
           workerUrl: 'https://my-dashboard-data.yourname.workers.dev'                                        */
     workerUrl: '',
     password: false,     // true if your Worker has DASHBOARD_PASSWORD set: the dashboard then asks for it

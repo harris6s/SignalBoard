@@ -1,6 +1,6 @@
 # Setup guide
 
-Connecting your data, every setting, branding and troubleshooting. Back to the [README](../README.md) · [Workbook reference](WORKBOOK.md)
+Connecting your data, every setting, branding and troubleshooting. Back to the [README](README.md) · [Workbook reference](WORKBOOK.md)
 
 ## Connect your data
 
@@ -15,7 +15,7 @@ Your figures stay in a private Google Sheet that your tools or scripts fill. A s
 
 1. Open `dashboard-template.xlsx` in Google Sheets (upload it to Drive, then open it with Google Sheets). Keep the tab names and headers.
 2. Create a Google Cloud **service account** (console.cloud.google.com › IAM & Admin › Service Accounts › Create), enable the **Google Drive API** for the project, and create a JSON key. Share the sheet with the service account's email address as **Viewer**. The sheet stays private.
-3. Create the Worker: Cloudflare › Workers & Pages › Create › Create Worker › Deploy, then *Edit code*, paste in `worker/worker.js`, and Deploy.
+3. Create the Worker: Cloudflare › Workers & Pages › Create › Create Worker › Deploy, then *Edit code*, paste in `cloudflare-worker.js`, and Deploy.
 4. In the Worker's Settings › Variables and Secrets, add:
    - `DASHBOARD_SITES`: your dashboard's address without the path, e.g. `https://your-username.github.io` (or your own domain)
    - `SHEET_ID`: the long code in the sheet's address, between `/d/` and `/edit`
@@ -38,7 +38,7 @@ Leave `workerUrl` and `fileUrl` empty and press **Open an Excel file**, or drag 
 | Setting | What it does |
 |---|---|
 | `name`, `tagline` | Your name and the line under it. |
-| `logo` | Leave empty to use `img/logo.png`, or `img/logo.svg` when there is no PNG. Or the path or link of any image. |
+| `logo` | Leave empty to use `logo.png`, or `logo.svg` when there is no PNG. Or the path or link of any image. |
 | `color` | The accent colour, e.g. `'#1E88E5'`. Empty: taken from the logo. |
 | `website`, `handles.tiktok`, `handles.x` | Your website's name, and handles used to link to your posts. |
 | `currency` | The currency your stores and ad accounts pay you in. Apple proceeds paid in other currencies are converted with the rates at the top of `reader.js`. |
@@ -72,7 +72,7 @@ Press **Personalize** and every change shows straight away, behind the panel:
 
 | To change | Do this |
 |---|---|
-| Logo | Add a square PNG as `img/logo.png`, or replace `img/logo.svg`. |
+| Logo | Add a square PNG as `logo.png`, or replace `logo.svg`. |
 | Colour | Nothing: it comes from the logo. To choose it, set `color: '#1E88E5'` in `config.js`. |
 | Name and links | `name`, `tagline`, `website` and `handles` in `config.js`. |
 | Currency | `currency: 'EUR'`, or any other ISO currency code. Money figures use its symbol. |
@@ -93,7 +93,7 @@ Press **Personalize** and every change shows straight away, behind the panel:
 ## Updating and privacy
 
 - **New figures** appear by themselves while the dashboard is open.
-- **Your copy doesn't update itself.** Copies made from a template are independent. To move to a newer version, replace the files with the new ones, keeping your `config.js` and `img/logo.png`.
+- **Your copy doesn't update itself.** Copies made from a template are independent. To move to a newer version, replace the files with the new ones, keeping your `config.js` and `logo.png`.
 - **The page holds no figures.** They come from your workbook: through the Worker only to your dashboard's address, and only after sign-in when you set a password.
 - **No tracking.** The only outside request is Google Fonts, for the typefaces. Remove the font links in `index.html` to drop it.
 
@@ -108,7 +108,7 @@ Press **Personalize** and every change shows straight away, behind the panel:
 | The welcome screen after setting `workerUrl` or `fileUrl` | Check the address in `config.js`. The message under the buttons says what went wrong. |
 | A page is missing | Its platform has no data in the workbook. Turn off `pages.hideEmpty` to show it anyway; the Connect data page lists which tabs your workbook has. |
 | A number looks wrong | The Data coverage page shows how current every tab is, and its audit checks the totals against the workbook's own sums. |
-| Nothing happens from `index.html` on your disk | Open it from a web address instead (see the [Quick start](../README.md#getting-started)). |
+| Nothing happens from `index.html` on your disk | Open it from a web address instead (see the [Quick start](README.md#getting-started)). |
 
 ## Project structure
 
@@ -121,12 +121,12 @@ actions.js               the action plan's rules
 reader.js                reads the workbook in the background
 sources.js               every tab, column and API the dashboard knows
 data.js                  empty starting data
-img/logo.svg             placeholder logo (add img/logo.png to replace it)
-lib/                     SheetJS, the Excel reader
+logo.svg                 placeholder logo (upload logo.png to replace it)
+xlsx.full.min.js         SheetJS, the Excel reader
 dashboard-template.xlsx  the blank workbook
 sample-data.xlsx         the same, filled with sample figures
-worker/worker.js         optional Cloudflare Worker for a private Google Sheet
-docs/                    WORKBOOK.md and the screenshots
+cloudflare-worker.js     optional Cloudflare Worker for a private Google Sheet
+SETUP.md, WORKBOOK.md    this guide and the workbook reference
 ```
 
 To change the advice, every action plan rule is in `actions.js`, one `rule(...)` each with plain-language comments. To give a new tab its own section, read it in `reader.js` and draw it in `app.js`. Styles and theme colours are at the top of `index.html`.

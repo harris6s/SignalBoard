@@ -3,7 +3,7 @@
    Three ways, strongest first:
      1. The Personalize panel (top bar): changes show straight away and are kept in this browser.
         "Download for GitHub" gives you config.js and logo.png to put in your repository for everyone.
-     2. A logo file in img/: upload img/logo.png (or replace img/logo.svg) and it is used everywhere,
+     2. A logo file: upload logo.png next to index.html (or replace logo.svg) and it is used everywhere,
         and the dashboard's accent colour is taken from it automatically.
      3. config.js: every setting, written down.
    ===================================================================================================== */
@@ -69,9 +69,9 @@
       `html[data-theme="programme"],html[data-theme="daylight"]{--brand:${hex(light)};--brand-soft:${soft(light, .1)};--brand-ink:${ink(light)}}`;
   }
 
-  /* ---------------- logo: an upload in this browser, config.js, or a file in img/ ---------------- */
-  const DEFAULT_LOGO = 'img/logo.svg', AUTO_KEY = 'dash-logo-colour';
-  const EXPLICIT = DASH.logo && DASH.logo !== DEFAULT_LOGO ? DASH.logo : '';    /* the template's placeholder doesn't count, so img/logo.png still wins */
+  /* ---------------- logo: an upload in this browser, config.js, or logo.png next to index.html ---------------- */
+  const DEFAULT_LOGO = 'logo.svg', AUTO_KEY = 'dash-logo-colour';
+  const EXPLICIT = DASH.logo && DASH.logo !== DEFAULT_LOGO ? DASH.logo : '';    /* the template's placeholder doesn't count, so logo.png still wins */
   let logoSrc = get(LOGO_KEY) || EXPLICIT || get('dash-logo-found') || DEFAULT_LOGO, autoColour = null;
   const tag = s => (s && s.length > 300 ? 'local:' + s.length + ':' + s.slice(-40) : s || '');
   /* the colour found in the logo last time, so the page opens in it without a flash */
@@ -83,8 +83,8 @@
   }
   async function findLogo() {
     const local = get(LOGO_KEY);
-    /* img/logo.png first, so uploading one to the repository is all it takes; then the logo.svg that ships with the template */
-    const list = local ? [local] : EXPLICIT ? [EXPLICIT, 'img/logo.png'] : ['img/logo.png'];
+    /* logo.png first, so uploading one to the repository is all it takes; then the logo.svg that ships with the template */
+    const list = local ? [local] : EXPLICIT ? [EXPLICIT, 'logo.png'] : ['logo.png'];
     let img = null, src = null; for (const s of list) { img = await probe(s); if (img) { src = s; break; } }
     if (!img) { img = await probe(DEFAULT_LOGO); src = DEFAULT_LOGO; }
     if (!local && !EXPLICIT) set('dash-logo-found', src);
@@ -208,7 +208,7 @@ window.DASH = {
   /* ---------- your brand ---------- */
   name: ${q(d.name || 'Your Brand')},
   tagline: ${q(d.tagline || 'Analytics dashboard')},
-  logo: ${q(draftLogo ? '' : EXPLICIT)},                              // leave empty to use img/logo.png (or img/logo.svg)
+  logo: ${q(draftLogo ? '' : EXPLICIT)},                              // leave empty to use logo.png (or logo.svg)
   color: ${q(d.color || '')},                            // accent colour, e.g. '#1E88E5'; empty = taken from your logo
   website: ${q(d.website || '')},
   handles: { tiktok: ${q(d.handles.tiktok)}, x: ${q(d.handles.x)} },
@@ -253,7 +253,7 @@ window.ATR_MANUAL = window.ATR_MANUAL || { instagramFollowers: null };
     const gh = document.getElementById('pz-gh'); if (!gh) return; gh.hidden = false;
     gh.innerHTML = `<h3>Put them in your GitHub repository</h3><ol>
       <li>Open your repository on GitHub. Click <b>config.js</b>, then the pencil to edit, paste in the new file’s contents (or use <b>Add file › Upload files</b> to replace it), and press <b>Commit changes</b>.</li>
-      ${draftLogo ? '<li>Open the <b>img</b> folder, choose <b>Add file › Upload files</b>, drop in <b>logo.png</b> and commit.</li>' : ''}
+      ${draftLogo ? '<li>On the repository’s front page, choose <b>Add file › Upload files</b>, drop in <b>logo.png</b> and commit.</li>' : ''}
       <li>GitHub Pages updates the site in about a minute, for everyone who opens it.</li></ol>`;
     gh.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
@@ -265,7 +265,7 @@ window.ATR_MANUAL = window.ATR_MANUAL || { instagramFollowers: null };
     if (k === 'close') close();
     else if (k === 'upload') { const f = document.getElementById('pz-file'); if (f) { f.value = ''; f.click(); } }
     else if (k === 'nologo') { draftLogo = null; (async () => { let im = null, src = null;
-        for (const s of EXPLICIT ? [EXPLICIT, 'img/logo.png', DEFAULT_LOGO] : ['img/logo.png', DEFAULT_LOGO]) { im = await probe(s); if (im) { src = s; break; } }
+        for (const s of EXPLICIT ? [EXPLICIT, 'logo.png', DEFAULT_LOGO] : ['logo.png', DEFAULT_LOGO]) { im = await probe(s); if (im) { src = s; break; } }
         logoSrc = src || DEFAULT_LOGO; paintLogo(); autoColour = im && src !== DEFAULT_LOGO ? colourOf(im) : null; markSolid(!!im && src !== DEFAULT_LOGO && solidOf(im));
         const fb = document.querySelector('[data-pz="fromlogo"]'); if (fb) fb.disabled = !autoColour; if (!draftColour) applyColour(autoColour);
         note(src === DEFAULT_LOGO ? 'Back to the placeholder logo.' : 'Back to the logo in the img folder.'); })(); }

@@ -1,6 +1,6 @@
 # The workbook
 
-Everything the dashboard shows comes from one Excel workbook (or Google Sheet) with a tab for each source. This page lists every tab and column, the API call or report that fills each one, and what each API needs. [`dashboard-template.xlsx`](../dashboard-template.xlsx) has the same tabs with a note on every header, and [`sample-data.xlsx`](../sample-data.xlsx) shows them filled in. Back to the [README](../README.md).
+Everything the dashboard shows comes from one Excel workbook (or Google Sheet) with a tab for each source. This page lists every tab and column, the API call or report that fills each one, and what each API needs. [`dashboard-template.xlsx`](dashboard-template.xlsx) has the same tabs with a note on every header, and [`sample-data.xlsx`](sample-data.xlsx) shows them filled in. Back to the [README](README.md).
 
 ## Rules for every tab
 
